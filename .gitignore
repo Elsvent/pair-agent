@@ -1,0 +1,37 @@
+# Hardhat
+artifacts/
+cache/
+typechain-types/
+
+# Node
+node_modules/
+.pnpm-store/
+*.log
+.DS_Store
+
+# Claude Code session-local
+.claude/
+
+# OMC plugin session-local
+.omc/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Build
+.next/
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+
+# Generated fixtures (regenerated via `pnpm fixtures:gen`)
+# (commit them; they're the contract for the cross-reference test)
+!test/fixtures/
+
+# Deployment artifacts
+deployments/*.local.json

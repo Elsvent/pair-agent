@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build + test gate. All other jobs depend on this passing.
+  # ---------------------------------------------------------------------------
+  build-and-test:
+    name: build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate EIP-712 fixtures
+        run: pnpm fixtures:gen
+
+      - name: hardhat compile
+        run: pnpm compile
+
+      - name: hardhat test
+        run: pnpm test
+
+      - name: Coverage report (informational)
+        run: pnpm coverage || true
+
+  # ---------------------------------------------------------------------------
+  # Parallel agent reviews. All three must pass for PR to be mergeable.
+  # ---------------------------------------------------------------------------
+  agent-code-review:
+    name: agent-code-review
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Code review (style, conventions, NatSpec)
+        run: |
+          # Hooks here: run linters / Claude Code reviewer agent / etc.
+          test -f CLAUDE.md
+          test -f ARCHITECTURE.md
+          echo "code review placeholder OK"
+
+  agent-qa:
+    name: agent-QA
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+      - name: QA — coverage threshold
+        run: |
+          pnpm coverage || true
+          # TODO: enforce > 90% on src/PairReviewGate.sol once T020 is done
+          echo "QA placeholder OK"
+
+  agent-security-review:
+    name: agent-security-review
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Slither
+        run: pip install slither-analyzer
+
+      - name: Slither
+        run: |
+          slither src/ --exclude-informational --fail-high || true
+
+      - name: ERC-8004 placeholder check
+        run: |
+          if grep -q "DO-NOT-TRUST-PLACEHOLDER" src/interfaces/IERC8004Identity.sol; then
+            echo "::warning::ERC-8004 Identity interface is still a placeholder. Complete T001."
+          fi
+          if grep -q "DO-NOT-TRUST-PLACEHOLDER" src/interfaces/IERC8004Validation.sol; then
+            echo "::warning::ERC-8004 Validation interface is still a placeholder. Complete T001."
+          fi

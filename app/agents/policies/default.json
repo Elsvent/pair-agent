@@ -1,0 +1,7 @@
+{
+  "_comment": "Reviewer policy. Edit allowed targets/selectors per deployment.",
+  "allowedTargets": [],
+  "maxValueWei": "100000000000000000",
+  "allowedSelectors": [],
+  "maxRequestsPerMinute": 10
+}

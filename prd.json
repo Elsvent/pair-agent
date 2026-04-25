@@ -1,0 +1,438 @@
+{
+  "project": "PairReviewGate",
+  "version": "1",
+  "updated": "2026-04-25",
+  "deadline": "2026-05-06",
+  "target_chain": "base-sepolia",
+  "toolchain": "hardhat",
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Freeze ERC-8004 interfaces from canonical deployments",
+      "phase": 0,
+      "priority": "blocker",
+      "depends_on": [],
+      "acceptance": [
+        "Visit 8004scan.io and locate canonical Identity Registry and Validation Registry on Base Sepolia",
+        "Copy the deployed ABIs verbatim",
+        "Replace src/interfaces/IERC8004Identity.sol with frozen interface",
+        "Replace src/interfaces/IERC8004Validation.sol with frozen interface",
+        "Add header comment with: source URL, contract address, block number, timestamp, sha256 of the ABI",
+        "Remove DO-NOT-TRUST-PLACEHOLDER warnings",
+        "pnpm compile succeeds against the frozen interfaces"
+      ],
+      "files": [
+        "src/interfaces/IERC8004Identity.sol",
+        "src/interfaces/IERC8004Validation.sol"
+      ],
+      "status": "todo",
+      "notes": "BLOCKER for everything else. Read notes/T001-inputs.md (the human pastes the verbatim ABIs there). Do not generate the interface from memory or training data."
+    },
+    {
+      "id": "T002",
+      "title": "Hardhat baseline + dependencies",
+      "phase": 0,
+      "priority": "blocker",
+      "depends_on": [],
+      "acceptance": [
+        "package.json pins hardhat ^2.22, @nomicfoundation/hardhat-toolbox-viem ^3, @openzeppelin/contracts ^5, solidity-coverage ^0.8",
+        "hardhat.config.ts: solc 0.8.24, optimizer 200 runs, sources='src', tests='test', baseSepolia network",
+        "pnpm install --frozen-lockfile succeeds",
+        "pnpm compile succeeds (mocks + skeleton compile, even though execute() reverts)",
+        "pnpm test runs the empty/baseline mocha suite without error"
+      ],
+      "files": ["hardhat.config.ts", "package.json"],
+      "status": "todo"
+    },
+    {
+      "id": "T003",
+      "title": "Mock helpers: ERC-1271, IdentityRegistry, ValidationAdapter",
+      "phase": 0,
+      "priority": "blocker",
+      "depends_on": ["T001", "T002"],
+      "acceptance": [
+        "src/test-helpers/MockERC1271.sol implements isValidSignature; toggleable to return invalid",
+        "src/test-helpers/MockIdentityRegistry.sol implements operatorOf with set/rotate/setActive methods",
+        "src/test-helpers/MockValidationAdapter.sol records postOutcome calls for assertion",
+        "All three compile and have one mocha smoke test each in test/helpers.test.ts"
+      ],
+      "files": [
+        "src/test-helpers/MockERC1271.sol",
+        "src/test-helpers/MockIdentityRegistry.sol",
+        "src/test-helpers/MockValidationAdapter.sol",
+        "test/helpers.test.ts"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T004",
+      "title": "EIP-712 cross-reference test (TS digest vs on-chain digest)",
+      "phase": 0,
+      "priority": "blocker",
+      "depends_on": ["T002"],
+      "acceptance": [
+        "app/lib/eip712.ts exports buildDomain and computeDigest using viem hashTypedData (already scaffolded)",
+        "app/scripts/gen-fixtures.ts generates test/fixtures/eip712.json with 5 hand-picked AgentRequest values + their expected digests + chainId + verifyingContract",
+        "test/helpers/signing.ts: viem-based signTypedData helper used by every test",
+        "test/EIP712Reference.test.ts deploys PairReviewGate, calls gate.digestOf(req) for each fixture, asserts byte-for-byte equality with the fixture's expectedDigest, AND with the digest computed live by app/lib/eip712.ts",
+        "pnpm test --grep EIP712Reference is green",
+        "If digest computation diverges in the future, this test fails loudly"
+      ],
+      "files": [
+        "app/lib/eip712.ts",
+        "app/scripts/gen-fixtures.ts",
+        "test/EIP712Reference.test.ts",
+        "test/helpers/signing.ts",
+        "test/fixtures/eip712.json"
+      ],
+      "status": "todo",
+      "notes": "This is the most under-rated bug-prevention task in the project. Do not skip."
+    },
+    {
+      "id": "T005",
+      "title": "CI: parallel agent-review / agent-QA / agent-security-review jobs",
+      "phase": 0,
+      "priority": "must",
+      "depends_on": ["T002"],
+      "acceptance": [
+        ".github/workflows/ci.yml runs pnpm install, pnpm fixtures:gen, pnpm compile, pnpm test on PR",
+        "Three parallel jobs after build-and-test: agent-code-review, agent-QA, agent-security-review",
+        "All three jobs must pass for PR to be mergeable",
+        "Slither runs as part of agent-security-review (pip install slither-analyzer; slither src/)"
+      ],
+      "files": [".github/workflows/ci.yml"],
+      "status": "todo"
+    },
+    {
+      "id": "T010",
+      "title": "Custom errors and events for IPairReviewGate",
+      "phase": 1,
+      "priority": "must",
+      "depends_on": ["T001", "T002"],
+      "acceptance": [
+        "src/interfaces/IPairReviewGate.sol defines all errors: BadNonce, ExpiredDeadline, InvalidProposerSig, InvalidReviewerSig, SameAgentTwice, ZeroAgentId, ContextHashMismatch, InactiveAgent, CallFailed, WrongMsgValue",
+        "Defines events: Executed, Rejected (already scaffolded — verify indexed fields)",
+        "Defines AgentRequest struct and RejectionReason enum per ARCHITECTURE.md §5.1, §5.2"
+      ],
+      "files": ["src/interfaces/IPairReviewGate.sol"],
+      "status": "todo"
+    },
+    {
+      "id": "T011",
+      "title": "PairReviewGate.execute happy path",
+      "phase": 1,
+      "priority": "must",
+      "depends_on": ["T003", "T004", "T010"],
+      "acceptance": [
+        "test/PairReviewGate.test.ts has 'executes the happy path': two EOA agents sign via test/helpers/signing.ts, gate.write.execute(...) calls a mock target, target receives the call, Executed event emitted",
+        "src/PairReviewGate.sol implements execute() with EIP-712 verification using SignatureChecker, ReentrancyGuard, and proper checks-effects-interactions ordering",
+        "Mock IdentityRegistry resolves agentId → operator at execution time (not signing time)",
+        "Test green via pnpm test --grep happy"
+      ],
+      "files": ["src/PairReviewGate.sol", "test/PairReviewGate.test.ts", "test/helpers/signing.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T012",
+      "title": "Replay protection: nonce + deadline + domain",
+      "phase": 1,
+      "priority": "must",
+      "depends_on": ["T011"],
+      "acceptance": [
+        "'reverts on replay (same nonce)': re-submitting a successful execute reverts with custom error BadNonce",
+        "'reverts on expired deadline': signature with deadline < block.timestamp reverts ExpiredDeadline",
+        "'reverts on wrong chainId': digest signed against a different chainId fails verification",
+        "'reverts on wrong verifyingContract': digest signed against a different contract address fails",
+        "All four use revertedWithCustomError; all green"
+      ],
+      "files": ["test/PairReviewGate.test.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T013",
+      "title": "ContextHash binding test",
+      "phase": 1,
+      "priority": "must",
+      "depends_on": ["T011"],
+      "acceptance": [
+        "'reverts on contextHash mismatch': Proposer signs over contextHash A, Reviewer signs over contextHash B, execute reverts InvalidReviewerSig (or ContextHashMismatch — choose and document in ARCHITECTURE)",
+        "Test green"
+      ],
+      "files": ["test/PairReviewGate.test.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T014",
+      "title": "Operator rotation invalidates in-flight signatures",
+      "phase": 1,
+      "priority": "must",
+      "depends_on": ["T011"],
+      "acceptance": [
+        "test/OperatorRotation.test.ts has 'rotation invalidates in-flight sig':",
+        "1) Proposer signs with operator key K1",
+        "2) Identity Registry rotates Proposer operator to K2 via mockId.write.rotateOperator",
+        "3) gate.write.execute reverts InvalidProposerSig",
+        "Test green — proves operator resolution is at execution time, not cached"
+      ],
+      "files": ["test/OperatorRotation.test.ts", "src/PairReviewGate.sol"],
+      "status": "todo"
+    },
+    {
+      "id": "T015",
+      "title": "ERC-1271 (smart-account) Reviewer path",
+      "phase": 1,
+      "priority": "must",
+      "depends_on": ["T011"],
+      "acceptance": [
+        "'executes with 1271 Reviewer wallet': Reviewer is a deployed MockERC1271 contract; execute succeeds",
+        "'reverts when 1271 wallet flips invalid': MockERC1271.write.toggleInvalid(true), execute reverts InvalidReviewerSig",
+        "Both tests green; SignatureChecker handles the dispatch correctly"
+      ],
+      "files": ["test/PairReviewGate.test.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T016",
+      "title": "Reentrancy attacker test",
+      "phase": 1,
+      "priority": "must",
+      "depends_on": ["T011"],
+      "acceptance": [
+        "src/test-helpers/ReentrancyAttacker.sol calls back into execute() during the inner call",
+        "'reverts on reentrancy': attack reverts due to ReentrancyGuard (ReentrancyGuardReentrantCall or CallFailed wrapping it)",
+        "Test green"
+      ],
+      "files": ["src/test-helpers/ReentrancyAttacker.sol", "test/PairReviewGate.test.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T017",
+      "title": "Same-agent-twice and zero-id rejections",
+      "phase": 1,
+      "priority": "must",
+      "depends_on": ["T011"],
+      "acceptance": [
+        "'reverts when same agent twice': proposerId == reviewerId reverts SameAgentTwice",
+        "'reverts on zero proposerId / zero reviewerId': id == 0 reverts ZeroAgentId",
+        "All green"
+      ],
+      "files": ["test/PairReviewGate.test.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T018",
+      "title": "postRejection() pathway",
+      "phase": 1,
+      "priority": "must",
+      "depends_on": ["T011"],
+      "acceptance": [
+        "'rejection path: reviewer refuses, nonce advances': proposer signed but reviewer rejects with reason; Rejected event emitted; nonce advances",
+        "MockValidationAdapter receives one postOutcome call with score=0",
+        "'rejection blocks subsequent execute as approved' so the same request cannot be re-submitted as approved",
+        "All green"
+      ],
+      "files": ["src/PairReviewGate.sol", "test/PairReviewGate.test.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T020",
+      "title": "Coverage target: PairReviewGate > 90%",
+      "phase": 1,
+      "priority": "should",
+      "depends_on": ["T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018"],
+      "acceptance": [
+        "pnpm coverage produces a report (solidity-coverage) showing > 90% line and branch on src/PairReviewGate.sol",
+        "Any gap is documented with a comment explaining why it's untestable"
+      ],
+      "files": [],
+      "status": "todo"
+    },
+    {
+      "id": "T030",
+      "title": "ValidationAdapterV1 implementation",
+      "phase": 2,
+      "priority": "must",
+      "depends_on": ["T011"],
+      "acceptance": [
+        "src/adapters/ValidationAdapterV1.sol implements IValidationAdapter, calls the frozen IERC8004Validation",
+        "Computes evidenceHash and tag correctly per ARCHITECTURE.md §3.2",
+        "Unit-tested in test/ValidationAdapterV1.test.ts with a Mock8004Validation registry",
+        "PairReviewGate wired to call the adapter for both Approved and Rejected outcomes"
+      ],
+      "files": [
+        "src/adapters/ValidationAdapterV1.sol",
+        "test/ValidationAdapterV1.test.ts",
+        "src/PairReviewGate.sol"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T031",
+      "title": "Deploy script for Base Sepolia",
+      "phase": 2,
+      "priority": "must",
+      "depends_on": ["T030"],
+      "acceptance": [
+        "scripts/deploy.ts reads ERC8004_IDENTITY_ADDRESS / ERC8004_VALIDATION_ADDRESS from env, deploys ValidationAdapterV1, deploys PairReviewGate, then prints `pnpm hardhat verify` commands for basescan",
+        "Idempotent: re-running with same env doesn't break, prints existing addresses (read deployments/base-sepolia.json)",
+        "Deploy log written to deployments/base-sepolia.json"
+      ],
+      "files": ["scripts/deploy.ts", "deployments/.gitkeep"],
+      "status": "todo"
+    },
+    {
+      "id": "T032",
+      "title": "Mint Proposer + Reviewer agent NFTs with IPFS cards",
+      "phase": 2,
+      "priority": "must",
+      "depends_on": ["T031"],
+      "acceptance": [
+        "Two agent cards in app/agent-cards/{proposer,reviewer}.json with name, description, capabilities, endpoints",
+        "Pinned to IPFS; CIDs recorded in deployments/base-sepolia.json",
+        "NFTs minted on canonical 8004 Identity Registry via scripts/mintAgents.ts; tokenIds recorded",
+        "Both visible on 8004scan.io"
+      ],
+      "files": [
+        "app/agent-cards/proposer.json",
+        "app/agent-cards/reviewer.json",
+        "scripts/mintAgents.ts"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T040",
+      "title": "Proposer agent runner",
+      "phase": 3,
+      "priority": "must",
+      "depends_on": ["T031"],
+      "acceptance": [
+        "app/agents/proposer.ts: takes user intent, builds AgentRequest, signs EIP-712 with operator key (env)",
+        "Uses LLM provider A (env: PROPOSER_LLM_PROVIDER, PROPOSER_LLM_MODEL)",
+        "Logs rationale to evidence bundle (NOT forwarded to Reviewer)",
+        "Vitest unit test: given a fixed prompt + seed, produces a deterministic AgentRequest"
+      ],
+      "files": ["app/agents/proposer.ts", "app/agents/__tests__/proposer.test.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T041",
+      "title": "Reviewer agent runner with policy module",
+      "phase": 3,
+      "priority": "must",
+      "depends_on": ["T031"],
+      "acceptance": [
+        "app/agents/reviewer.ts: receives ONLY structured AgentRequest (no rationale)",
+        "Loads policy from app/agents/policies/default.json (allowlist of targets, max value, tool allowlist)",
+        "Uses LLM provider B (different from Proposer)",
+        "Returns either signature or rejection with reasonCode",
+        "Adversarial vitest cases: malicious target, value over cap, unknown selector — all rejected"
+      ],
+      "files": [
+        "app/agents/reviewer.ts",
+        "app/agents/policies/default.json",
+        "app/agents/__tests__/reviewer.test.ts"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T042",
+      "title": "Frontend orchestrator (Next.js + viem)",
+      "phase": 3,
+      "priority": "must",
+      "depends_on": ["T040", "T041"],
+      "acceptance": [
+        "app/pages/index.tsx: connect wallet, enter intent, see both agents' decisions, submit to gate",
+        "Uses viem only (no ethers)",
+        "Pins evidence bundle to IPFS, includes CID in execute call",
+        "Shows live event status: pending → executed | rejected"
+      ],
+      "files": ["app/pages/index.tsx", "app/lib/contracts.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T050",
+      "title": "Demo: happy path on Base Sepolia",
+      "phase": 4,
+      "priority": "must",
+      "depends_on": ["T032", "T042"],
+      "acceptance": [
+        "Recorded run: user types 'swap 100 USDC for ETH'; both agents sign; tx lands on Base Sepolia; explorer link shows Validation entry",
+        "End-to-end time < 30s",
+        "deployments/base-sepolia.json updated with example tx hash"
+      ],
+      "files": [],
+      "status": "todo"
+    },
+    {
+      "id": "T051",
+      "title": "Demo: prompt-injection attack blocked",
+      "phase": 4,
+      "priority": "must",
+      "depends_on": ["T050"],
+      "acceptance": [
+        "Reproducible attack: a tool description contains an injection payload; Proposer is misled; Reviewer (different LLM, no Proposer rationale) refuses to sign",
+        "Validation Registry entry posted with reason REJECTED_BY_REVIEWER",
+        "Deterministic seed; documented in app/demo/attack-scenario.md"
+      ],
+      "files": ["app/demo/attack-scenario.md", "app/demo/attack-payload.json"],
+      "status": "todo"
+    },
+    {
+      "id": "T060",
+      "title": "Indexer dashboard",
+      "phase": 4,
+      "priority": "should",
+      "depends_on": ["T050"],
+      "acceptance": [
+        "Reads Executed/Rejected events from gate and Validation entries from registry",
+        "Shows per-pair counts and last 10 events",
+        "Lives at /dashboard route"
+      ],
+      "files": ["app/pages/dashboard.tsx", "app/lib/indexer.ts"],
+      "status": "todo"
+    },
+    {
+      "id": "T080",
+      "title": "Final security pass",
+      "phase": 5,
+      "priority": "must",
+      "depends_on": ["T020", "T030", "T050", "T051"],
+      "acceptance": [
+        "Slither (`slither src/`) clean or every finding has a written justification",
+        "Manual review checklist run: signature scheme, replay vectors, reentrancy, access control, integer math, external calls",
+        "No high-severity items open"
+      ],
+      "files": ["docs/security-review.md"],
+      "status": "todo"
+    },
+    {
+      "id": "T081",
+      "title": "Demo video + README polish",
+      "phase": 5,
+      "priority": "must",
+      "depends_on": ["T050", "T051"],
+      "acceptance": [
+        "≤ 4 min video matching plan.md demo script",
+        "README has 30-second judge pitch at the top",
+        "All explorer links live and point to verified contracts"
+      ],
+      "files": ["README.md", "docs/demo-video.md"],
+      "status": "todo"
+    },
+    {
+      "id": "T082",
+      "title": "ETHGlobal submission",
+      "phase": 5,
+      "priority": "must",
+      "depends_on": ["T080", "T081"],
+      "acceptance": [
+        "Project page filled on ethglobal.com",
+        "GitHub repo public",
+        "Demo video uploaded",
+        "Submitted before deadline"
+      ],
+      "files": [],
+      "status": "todo"
+    }
+  ]
+}

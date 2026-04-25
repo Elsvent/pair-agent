@@ -1,0 +1,29 @@
+{
+  "name": "pair-review-gate",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:ts": "vitest run",
+    "coverage": "hardhat coverage",
+    "fixtures:gen": "tsx app/scripts/gen-fixtures.ts",
+    "lint": "eslint app",
+    "build": "next build app"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
+    "@openzeppelin/contracts": "5.0.2",
+    "@types/node": "^22.0.0",
+    "chai": "^4.5.0",
+    "hardhat": "^2.22.0",
+    "solidity-coverage": "^0.8.13",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  },
+  "packageManager": "pnpm@9.7.0"
+}
