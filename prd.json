@@ -26,7 +26,24 @@
         "src/interfaces/IERC8004Validation.sol"
       ],
       "status": "todo",
-      "notes": "BLOCKER for everything else. Read notes/T001-inputs.md (the human pastes the verbatim ABIs there). Do not generate the interface from memory or training data."
+      "notes": "BLOCKER for everything else. Read notes/T001-inputs.md — the canonical sources are pre-fetched there. Do not generate the interface from memory or training data."
+    },
+    {
+      "id": "T001b",
+      "title": "Vendor ValidationRegistryUpgradeable canonical source for self-deploy",
+      "phase": 0,
+      "priority": "blocker",
+      "depends_on": ["T001"],
+      "acceptance": [
+        "ERC-8004 ValidationRegistry is NOT deployed canonically on Base Sepolia (per github.com/erc-8004/erc-8004-contracts README). Path A (chosen by user): we deploy our own instance, sourced verbatim from the canonical repo.",
+        "Copy contracts/ValidationRegistryUpgradeable.sol from the canonical repo into src/external/ValidationRegistryUpgradeable.sol with header citing the github URL + commit SHA + sha256 of the file at vendor time",
+        "Pull in any required dependencies (UUPSUpgradeable, Initializable from @openzeppelin/contracts-upgradeable if not already in node_modules)",
+        "pnpm compile succeeds with the vendored source",
+        "Decide non-upgradeable wrapper or full proxy deploy (default: full canonical, deploy proxy + impl at T031)"
+      ],
+      "files": ["src/external/ValidationRegistryUpgradeable.sol", "package.json"],
+      "status": "todo",
+      "notes": "Adapter pattern (CLAUDE.md Rule 7) means ValidationAdapterV1 wraps this, so when the canonical team ships a Base Sepolia deployment we swap one address."
     },
     {
       "id": "T002",
@@ -249,14 +266,15 @@
     },
     {
       "id": "T030",
-      "title": "ValidationAdapterV1 implementation",
+      "title": "ValidationAdapterV1 implementation (two-phase canonical API)",
       "phase": 2,
       "priority": "must",
-      "depends_on": ["T011"],
+      "depends_on": ["T001b", "T011"],
       "acceptance": [
         "src/adapters/ValidationAdapterV1.sol implements IValidationAdapter, calls the frozen IERC8004Validation",
+        "postOutcome(...) translates to the canonical two-phase API: registry.validationRequest(...) then registry.validationResponse(...) within the same call (atomic from PairReviewGate's view)",
         "Computes evidenceHash and tag correctly per ARCHITECTURE.md §3.2",
-        "Unit-tested in test/ValidationAdapterV1.test.ts with a Mock8004Validation registry",
+        "Unit-tested in test/ValidationAdapterV1.test.ts with the vendored ValidationRegistryUpgradeable from T001b (deployed locally in the test fixture, not a mock)",
         "PairReviewGate wired to call the adapter for both Approved and Rejected outcomes"
       ],
       "files": [
@@ -268,17 +286,21 @@
     },
     {
       "id": "T031",
-      "title": "Deploy script for Base Sepolia",
+      "title": "Deploy script for Base Sepolia (incl. our own ValidationRegistry)",
       "phase": 2,
       "priority": "must",
       "depends_on": ["T030"],
       "acceptance": [
-        "scripts/deploy.ts reads ERC8004_IDENTITY_ADDRESS / ERC8004_VALIDATION_ADDRESS from env, deploys ValidationAdapterV1, deploys PairReviewGate, then prints `pnpm hardhat verify` commands for basescan",
-        "Idempotent: re-running with same env doesn't break, prints existing addresses (read deployments/base-sepolia.json)",
-        "Deploy log written to deployments/base-sepolia.json"
+        "scripts/deploy.ts reads ERC8004_IDENTITY_ADDRESS from env (default: 0x8004A818BFB912233c491871b3d84c89A494BD9e — canonical Base Sepolia)",
+        "scripts/deploy.ts deploys our vendored ValidationRegistryUpgradeable (impl + ERC1967Proxy) and initializes it with the IdentityRegistry address; address recorded in deployments/base-sepolia.json under `validationRegistry`",
+        "Then deploys ValidationAdapterV1 pointing at our deployed ValidationRegistry; then deploys PairReviewGate pointing at canonical IdentityRegistry + our adapter",
+        "Prints `pnpm hardhat verify` commands for basescan for all three (ValidationRegistry impl, adapter, gate)",
+        "Idempotent: re-running with same env reads existing addresses from deployments/base-sepolia.json and skips deploys",
+        "Full deploy log (addresses, tx hashes, block numbers) written to deployments/base-sepolia.json"
       ],
-      "files": ["scripts/deploy.ts", "deployments/.gitkeep"],
-      "status": "todo"
+      "files": ["scripts/deploy.ts", "deployments/.gitkeep", "deployments/base-sepolia.json"],
+      "status": "todo",
+      "notes": "Requires .env: BASE_SEPOLIA_RPC_URL, DEPLOYER_PRIVATE_KEY (funded), BASESCAN_API_KEY. If missing, ralph blocks here."
     },
     {
       "id": "T032",
@@ -288,16 +310,18 @@
       "depends_on": ["T031"],
       "acceptance": [
         "Two agent cards in app/agent-cards/{proposer,reviewer}.json with name, description, capabilities, endpoints",
-        "Pinned to IPFS; CIDs recorded in deployments/base-sepolia.json",
-        "NFTs minted on canonical 8004 Identity Registry via scripts/mintAgents.ts; tokenIds recorded",
-        "Both visible on 8004scan.io"
+        "Pinned to IPFS; ipfs://<cid> URIs recorded in deployments/base-sepolia.json",
+        "NFTs minted on canonical 8004 Identity Registry (0x8004A818...) via scripts/mintAgents.ts using the canonical `register(string agentURI)` method; tokenIds returned by the Registered event recorded in deployments/base-sepolia.json",
+        "Then setAgentWallet(agentId, operatorAddress, deadline, signature) for each agent so the operator key is registered (used by PairReviewGate.getAgentWallet at execution time)",
+        "Both agents visible on 8004scan.io"
       ],
       "files": [
         "app/agent-cards/proposer.json",
         "app/agent-cards/reviewer.json",
         "scripts/mintAgents.ts"
       ],
-      "status": "todo"
+      "status": "todo",
+      "notes": "setAgentWallet requires an EIP-712 signature from the agent owner — see canonical IdentityRegistryUpgradeable for the typed-data domain."
     },
     {
       "id": "T040",

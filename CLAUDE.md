@@ -37,9 +37,9 @@ If you change the `AgentRequest` struct in any way:
 
 OpenZeppelin has API drift across versions. We pin a specific version in `package.json` (`@openzeppelin/contracts`). Always check the actual file in `node_modules/@openzeppelin/contracts/` before importing or calling. If the API doesn't match what you remember, trust the file, not your memory.
 
-### Rule 5 — Operator resolution at execution time
+### Rule 5 — Agent-wallet resolution at execution time
 
-`PairReviewGate.execute()` MUST call `IIdentityRegistry.operatorOf(agentId)` at execution time. Do **not** cache, pre-resolve, or pass operator addresses as parameters. This is a security property, enforced by `test/OperatorRotation.test.ts`.
+`PairReviewGate.execute()` MUST call `IERC8004Identity.getAgentWallet(agentId)` at execution time (canonical name; the placeholder's `operatorOf` was incorrect — see `notes/T001-inputs.md` §1). Do **not** cache, pre-resolve, or pass wallet addresses as parameters. This is a security property, enforced by `test/OperatorRotation.test.ts`. The test name keeps "OperatorRotation" for continuity; the on-chain method is `getAgentWallet`.
 
 ### Rule 6 — Reentrancy
 
