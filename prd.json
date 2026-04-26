@@ -139,7 +139,8 @@
         "Defines AgentRequest struct and RejectionReason enum per ARCHITECTURE.md §5.1, §5.2"
       ],
       "files": ["src/interfaces/IPairReviewGate.sol"],
-      "status": "todo"
+      "status": "needs_human_review",
+      "notes": "All errors/events/struct/enum already defined in the scaffold's IPairReviewGate.sol. Verified via grep: 9 custom errors (BadNonce, ExpiredDeadline, InvalidProposerSig, InvalidReviewerSig, SameAgentTwice, ZeroAgentId, ContextHashMismatch, InactiveAgent, CallFailed, WrongMsgValue), 2 events (Executed, Rejected), AgentRequest struct + RejectionReason enum. InactiveAgent may become dead code post-T011 (canonical registry has no isActive); decide at T011 implementation time whether to drop it or wire to ownerOf/getAgentWallet sentinel."
     },
     {
       "id": "T011",
