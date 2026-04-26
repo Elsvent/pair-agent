@@ -61,7 +61,7 @@
         "pnpm test runs the empty/baseline mocha suite without error"
       ],
       "files": ["hardhat.config.ts", "package.json"],
-      "status": "todo"
+      "status": "in_progress"
     },
     {
       "id": "T003",
