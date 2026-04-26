@@ -15,6 +15,13 @@ contract CallTarget {
         return x + 1;
     }
 
+    function ping() external payable returns (bool) {
+        lastData = msg.data;
+        lastValue = msg.value;
+        callCount++;
+        return true;
+    }
+
     receive() external payable {
         lastValue = msg.value;
         callCount++;

@@ -195,13 +195,13 @@
       "depends_on": ["T011"],
       "acceptance": [
         "test/OperatorRotation.test.ts has 'rotation invalidates in-flight sig':",
-        "1) Proposer signs with operator key K1",
-        "2) Identity Registry rotates Proposer operator to K2 via mockId.write.rotateOperator",
+        "1) Proposer signs with key K1",
+        "2) Identity Registry rotates Proposer wallet to K2 via mockId.write.rotateAgentWallet",
         "3) gate.write.execute reverts InvalidProposerSig",
-        "Test green — proves operator resolution is at execution time, not cached"
+        "Test green — proves agent-wallet resolution is at execution time, not cached"
       ],
-      "files": ["test/OperatorRotation.test.ts", "src/PairReviewGate.sol"],
-      "status": "todo"
+      "files": ["test/OperatorRotation.test.ts", "src/PairReviewGate.sol", "src/test-helpers/CallTarget.sol"],
+      "status": "needs_human_review"
     },
     {
       "id": "T015",
