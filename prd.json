@@ -104,10 +104,12 @@
         "test/EIP712Reference.test.ts",
         "test/helpers/signing.ts",
         "test/fixtures/eip712.json",
-        "hardhat.config.ts"
+        "hardhat.config.ts",
+        "tsconfig.hardhat.json",
+        "package.json"
       ],
-      "status": "in_progress",
-      "notes": "This is the most under-rated bug-prevention task in the project. Do not skip."
+      "status": "needs_human_review",
+      "notes": "Five test cases verified: gate address matches fixture verifyingContract; chainId matches; contract digest matches fixture expectedDigest; TS digest matches fixture expectedDigest; contract digest === TS digest live. Address determinism: gate is FIRST contract deployed by account #0 (0x5FbDB...0aa3); changing deploy order in this test breaks fixtures."
     },
     {
       "id": "T005",
@@ -122,7 +124,8 @@
         "Slither runs as part of agent-security-review (pip install slither-analyzer; slither src/)"
       ],
       "files": [".github/workflows/ci.yml"],
-      "status": "todo"
+      "status": "needs_human_review",
+      "notes": "Implemented during the Foundry->Hardhat migration commit. ci.yml runs pnpm install --frozen-lockfile, pnpm fixtures:gen, pnpm compile, pnpm test in build-and-test; three parallel downstream jobs (agent-code-review, agent-QA, agent-security-review) all need-build-and-test; slither runs in agent-security-review."
     },
     {
       "id": "T010",

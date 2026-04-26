@@ -1,31 +1,38 @@
 // app/scripts/gen-fixtures.ts
 //
 // Generates test/fixtures/eip712.json — the source of truth for the
-// EIP-712 cross-reference test. Run via `pnpm fixtures:gen`.
+// EIP-712 cross-reference test (test/EIP712Reference.test.ts).
+//
+// Run via: pnpm fixtures:gen
 //
 // Output shape:
 // {
 //   chainId: number,
 //   verifyingContract: address,
-//   cases: [{ request: AgentRequest, expectedDigest: Hex }, ...]
+//   cases: [{ request: AgentRequest (stringified bigints), expectedDigest: Hex }, ...]
 // }
 //
-// IMPORTANT: chainId and verifyingContract here MUST match the values used
-// in test/EIP712Reference.t.sol::setUp(). If you change one, change both.
+// IMPORTANT — Address determinism contract:
+//   `verifyingContract` here is Hardhat's first-deployment address from
+//   account #0 with nonce 0: 0x5FbDB2315678afecb367f032d93F642f64180aa3.
+//   The cross-reference test MUST deploy PairReviewGate as the first and
+//   only contract from account #0. Any extra deploy before the gate breaks
+//   address determinism and the digest assertions will fail.
+//
+//   `chainId` matches networks.hardhat.chainId in hardhat.config.ts.
 
 import { writeFileSync, mkdirSync } from "node:fs";
 import { encodeFunctionData, type Address, type Hex } from "viem";
 import { computeDigest, type AgentRequest } from "../lib/eip712";
 
-// Lock chainId so fixtures are reproducible. Match EIP712Reference.t.sol.
-const CHAIN_ID = 11155111;
+// Match networks.hardhat.chainId in hardhat.config.ts (Base Sepolia).
+const CHAIN_ID = 84532;
 
-// Foundry's deterministic first-deploy address with the test setup
-// (3 contracts deployed before gate: id, va, gate -> 3rd contract).
-// If setUp() ordering changes, regenerate.
-const VERIFYING_CONTRACT: Address = "0x2e234DAe75C793f67A35089C9d99245E1C58470b";
+// Hardhat's deterministic first-deploy address from account #0 nonce 0.
+const VERIFYING_CONTRACT: Address = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 const CASES: AgentRequest[] = [
+  // Case 0 — minimal: empty calldata, zero value, fresh nonce.
   {
     proposerId: 1n,
     reviewerId: 2n,
@@ -34,32 +41,63 @@ const CASES: AgentRequest[] = [
     data: "0x",
     nonce: 0n,
     deadline: 1_800_000_000n,
-    contextHash: "0x" + "11".repeat(32) as Hex,
+    contextHash: ("0x" + "11".repeat(32)) as Hex,
   },
+  // Case 1 — typed call with value transfer.
   {
     proposerId: 1n,
     reviewerId: 2n,
     target: "0x0000000000000000000000000000000000000aaa",
     value: 1_000_000_000n,
     data: encodeFunctionData({
-      abi: [{ name: "bump", type: "function", inputs: [{ name: "x", type: "uint256" }], outputs: [] }],
+      abi: [
+        {
+          name: "bump",
+          type: "function",
+          inputs: [{ name: "x", type: "uint256" }],
+          outputs: [{ name: "", type: "uint256" }],
+          stateMutability: "payable",
+        },
+      ],
       functionName: "bump",
       args: [42n],
     }),
     nonce: 5n,
     deadline: 1_800_001_234n,
-    contextHash: "0x" + "22".repeat(32) as Hex,
+    contextHash: ("0x" + "22".repeat(32)) as Hex,
   },
+  // Case 2 — long calldata to exercise keccak256(bytes) on the dynamic field.
   {
     proposerId: 999n,
     reviewerId: 1000n,
-    target: "0x000000000000000000000000000000000000bEEF",
+    target: "0x000000000000000000000000000000000000beef",
     value: 0n,
-    // Long calldata to exercise the keccak256(bytes) dynamic-type path
     data: ("0xabcdef" + "deadbeef".repeat(64)) as Hex,
     nonce: 1n,
     deadline: 1_999_999_999n,
-    contextHash: "0x" + "33".repeat(32) as Hex,
+    contextHash: ("0x" + "33".repeat(32)) as Hex,
+  },
+  // Case 3 — high agent ids, max-ish value, distinct context.
+  {
+    proposerId: 9_999_999n,
+    reviewerId: 10_000_000n,
+    target: "0xcafecafecafecafecafecafecafecafecafecafe",
+    value: 2n ** 64n,
+    data: "0xdeadbeef",
+    nonce: 100n,
+    deadline: 2_000_000_000n,
+    contextHash: ("0x" + "ab".repeat(32)) as Hex,
+  },
+  // Case 4 — zero contextHash + late deadline.
+  {
+    proposerId: 7n,
+    reviewerId: 8n,
+    target: "0x0000000000000000000000000000000000001234",
+    value: 0n,
+    data: "0x",
+    nonce: 42n,
+    deadline: 9_999_999_999n,
+    contextHash: ("0x" + "00".repeat(32)) as Hex,
   },
 ];
 

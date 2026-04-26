@@ -1,6 +1,71 @@
 {
-  "_comment": "PLACEHOLDER — regenerate via `pnpm fixtures:gen` once app/lib/eip712.ts is wired.",
-  "chainId": 11155111,
-  "verifyingContract": "0x2e234DAe75C793f67A35089C9d99245E1C58470b",
-  "cases": []
+  "chainId": 84532,
+  "verifyingContract": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "cases": [
+    {
+      "request": {
+        "proposerId": "1",
+        "reviewerId": "2",
+        "target": "0x0000000000000000000000000000000000000aaa",
+        "value": "0",
+        "data": "0x",
+        "nonce": "0",
+        "deadline": "1800000000",
+        "contextHash": "0x1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expectedDigest": "0x3d22690bf588d21f454e5f09efded9995ef1f9d857cce86e1a29b42b18d1393a"
+    },
+    {
+      "request": {
+        "proposerId": "1",
+        "reviewerId": "2",
+        "target": "0x0000000000000000000000000000000000000aaa",
+        "value": "1000000000",
+        "data": "0xb20eb4c4000000000000000000000000000000000000000000000000000000000000002a",
+        "nonce": "5",
+        "deadline": "1800001234",
+        "contextHash": "0x2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expectedDigest": "0xa011d511f3a9ef888913c8fe6d25b2e2fd8e7328311171b64f9468ab54f5b1d8"
+    },
+    {
+      "request": {
+        "proposerId": "999",
+        "reviewerId": "1000",
+        "target": "0x000000000000000000000000000000000000beef",
+        "value": "0",
+        "data": "0xabcdefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        "nonce": "1",
+        "deadline": "1999999999",
+        "contextHash": "0x3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      "expectedDigest": "0x3a5ce5f92dd10f4533e538cf941ef9edbec82e72fc6d799dd39ff97a352a34ee"
+    },
+    {
+      "request": {
+        "proposerId": "9999999",
+        "reviewerId": "10000000",
+        "target": "0xcafecafecafecafecafecafecafecafecafecafe",
+        "value": "18446744073709551616",
+        "data": "0xdeadbeef",
+        "nonce": "100",
+        "deadline": "2000000000",
+        "contextHash": "0xabababababababababababababababababababababababababababababababab"
+      },
+      "expectedDigest": "0x32468d9131d6a6643b6244645064cc38b5d5dfc9ee99802efcf3544fa8a0c544"
+    },
+    {
+      "request": {
+        "proposerId": "7",
+        "reviewerId": "8",
+        "target": "0x0000000000000000000000000000000000001234",
+        "value": "0",
+        "data": "0x",
+        "nonce": "42",
+        "deadline": "9999999999",
+        "contextHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expectedDigest": "0xc29ee2d4bcdf7f2841aedea849092c7ff1dfb3ded5055185e46ebd019c7aeb3f"
+    }
+  ]
 }
