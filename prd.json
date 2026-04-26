@@ -25,7 +25,7 @@
         "src/interfaces/IERC8004Identity.sol",
         "src/interfaces/IERC8004Validation.sol"
       ],
-      "status": "todo",
+      "status": "in_progress",
       "notes": "BLOCKER for everything else. Read notes/T001-inputs.md — the canonical sources are pre-fetched there. Do not generate the interface from memory or training data."
     },
     {
