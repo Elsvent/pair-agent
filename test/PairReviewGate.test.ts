@@ -205,6 +205,19 @@ describe("PairReviewGate (T011)", function () {
         gate.write.execute([req, proposerSig, reviewerSigWrongVerifying, "", "0x" + "00".repeat(32) as Hex]),
       ).to.be.rejectedWith(/InvalidReviewerSig/);
     });
+
+    it("reverts on msg.value != req.value -> WrongMsgValue (T020 branch)", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      const req = bumpRequest(target.address, { value: 100n });
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+
+      // Signed with value=100 but submit with msg.value=0.
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSig, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/WrongMsgValue/);
+    });
   });
 
   describe("execute() ERC-1271 reviewer path (T015)", function () {
@@ -321,6 +334,68 @@ describe("PairReviewGate (T011)", function () {
 
       expect(await va.read.callCount()).to.equal(1n);
       expect((await va.read.lastCall()).score).to.equal(0);
+    });
+
+    it("reverts when postRejection's proposerSig is invalid -> InvalidProposerSig (T020 branch)", async function () {
+      const { gate, target, reviewer } = await deployRig();
+      const req = bumpRequest(target.address);
+      // Reviewer signs as if they were the proposer — wrong key, valid sig shape.
+      const wrongSig = await signAgentRequest(reviewer, {
+        chainId: CHAIN_ID,
+        verifyingContract: gate.address,
+        request: req,
+      });
+
+      await expect(
+        gate.write.postRejection([req, wrongSig, 1, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/InvalidProposerSig/);
+    });
+
+    it("postRejection invariant guards revert correctly (T020 branches)", async function () {
+      const { gate, target } = await deployRig();
+      const baseReq = bumpRequest(target.address);
+      const empty: Hex = "0x";
+      const zHash: Hex = ("0x" + "00".repeat(32)) as Hex;
+
+      // ZeroAgentId on proposerId.
+      await expect(
+        gate.write.postRejection([{ ...baseReq, proposerId: 0n }, empty, 1, "", zHash]),
+      ).to.be.rejectedWith(/ZeroAgentId/);
+
+      // ZeroAgentId on reviewerId.
+      await expect(
+        gate.write.postRejection([{ ...baseReq, reviewerId: 0n }, empty, 1, "", zHash]),
+      ).to.be.rejectedWith(/ZeroAgentId/);
+
+      // SameAgentTwice.
+      await expect(
+        gate.write.postRejection([{ ...baseReq, reviewerId: baseReq.proposerId }, empty, 1, "", zHash]),
+      ).to.be.rejectedWith(/SameAgentTwice/);
+
+      // ExpiredDeadline.
+      await expect(
+        gate.write.postRejection([{ ...baseReq, deadline: 1n }, empty, 1, "", zHash]),
+      ).to.be.rejectedWith(/ExpiredDeadline/);
+
+      // BadNonce.
+      await expect(
+        gate.write.postRejection([{ ...baseReq, nonce: 99n }, empty, 1, "", zHash]),
+      ).to.be.rejectedWith(/BadNonce/);
+    });
+  });
+
+  describe("views (T020 coverage)", function () {
+    it("domainSeparator() returns a non-zero bytes32", async function () {
+      const { gate } = await deployRig();
+      const sep = await gate.read.domainSeparator();
+      expect(sep).to.match(/^0x[0-9a-f]{64}$/i);
+      expect(sep).to.not.equal("0x" + "00".repeat(32));
+    });
+
+    it("nonceOf() returns 0 for fresh pair", async function () {
+      const { gate } = await deployRig();
+      expect(await gate.read.nonceOf([1n, 2n])).to.equal(0n);
+      expect(await gate.read.nonceOf([2n, 1n])).to.equal(0n); // canonical order
     });
   });
 

@@ -270,8 +270,9 @@
         "pnpm coverage produces a report (solidity-coverage) showing > 90% line and branch on src/PairReviewGate.sol",
         "Any gap is documented with a comment explaining why it's untestable"
       ],
-      "files": [],
-      "status": "todo"
+      "files": ["test/PairReviewGate.test.ts", "package.json"],
+      "status": "needs_human_review",
+      "notes": "src/PairReviewGate.sol: 100% stmts, 100% branch, 100% funcs, 100% lines. package.json coverage script gets SOLIDITY_COVERAGE=true so hardhat-viem co-exists with solidity-coverage."
     },
     {
       "id": "T030",

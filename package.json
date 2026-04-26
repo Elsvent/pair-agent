@@ -6,7 +6,7 @@
     "compile": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat compile",
     "test": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat test",
     "test:ts": "vitest run",
-    "coverage": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat coverage",
+    "coverage": "SOLIDITY_COVERAGE=true TS_NODE_PROJECT=tsconfig.hardhat.json hardhat coverage",
     "fixtures:gen": "tsx app/scripts/gen-fixtures.ts",
     "lint": "eslint app",
     "build": "next build app"
