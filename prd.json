@@ -61,7 +61,7 @@
         "pnpm test runs the empty/baseline mocha suite without error"
       ],
       "files": ["hardhat.config.ts", "package.json"],
-      "status": "in_progress"
+      "status": "needs_human_review"
     },
     {
       "id": "T003",
@@ -70,10 +70,11 @@
       "priority": "blocker",
       "depends_on": ["T001", "T002"],
       "acceptance": [
-        "src/test-helpers/MockERC1271.sol implements isValidSignature; toggleable to return invalid",
-        "src/test-helpers/MockIdentityRegistry.sol implements operatorOf with set/rotate/setActive methods",
+        "src/test-helpers/MockERC1271.sol implements isValidSignature against a configured signer; toggleable to return invalid",
+        "src/test-helpers/MockIdentityRegistry.sol implements canonical IERC8004Identity (getAgentWallet, ownerOf, tokenURI, register) plus test helpers (setAgent, rotateAgentWallet)",
         "src/test-helpers/MockValidationAdapter.sol records postOutcome calls for assertion",
-        "All three compile and have one mocha smoke test each in test/helpers.test.ts"
+        "test/helpers.test.ts has at least one mocha smoke test per helper covering happy + adversarial paths",
+        "pnpm test passes"
       ],
       "files": [
         "src/test-helpers/MockERC1271.sol",
@@ -81,7 +82,7 @@
         "src/test-helpers/MockValidationAdapter.sol",
         "test/helpers.test.ts"
       ],
-      "status": "todo"
+      "status": "in_progress"
     },
     {
       "id": "T004",
