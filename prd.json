@@ -44,7 +44,7 @@
         "Decide non-upgradeable wrapper or full proxy deploy (default: full canonical, deploy proxy + impl at T031)"
       ],
       "files": ["src/external/ValidationRegistryUpgradeable.sol", "package.json"],
-      "status": "in_progress",
+      "status": "needs_human_review",
       "notes": "Adapter pattern (CLAUDE.md Rule 7) means ValidationAdapterV1 wraps this, so when the canonical team ships a Base Sepolia deployment we swap one address."
     },
     {
