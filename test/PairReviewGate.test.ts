@@ -245,6 +245,85 @@ describe("PairReviewGate (T011)", function () {
     });
   });
 
+  describe("postRejection() (T018)", function () {
+    it("posts REJECTED, advances nonce, emits Rejected", async function () {
+      const { gate, va, target, proposer } = await deployRig();
+      const req = bumpRequest(target.address);
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+
+      // RejectionReason.ReviewerPolicy == 1 in the enum order
+      // (Unspecified=0, ReviewerPolicy=1, ReviewerSignatureMissing=2, ...)
+      const REASON_REVIEWER_POLICY = 1;
+
+      await gate.write.postRejection([
+        req,
+        proposerSig,
+        REASON_REVIEWER_POLICY,
+        "ipfs://rej",
+        keccak256(toBytes("rej")),
+      ]);
+
+      // Validation registry recorded a REJECTED outcome with score=0.
+      expect(await va.read.callCount()).to.equal(1n);
+      const last = await va.read.lastCall();
+      expect(last.score).to.equal(0);
+      expect(last.subjectAgentId).to.equal(1n);
+
+      // Nonce advanced.
+      expect(await gate.read.nonceOf([1n, 2n])).to.equal(1n);
+
+      // Rejected event.
+      const events = await gate.getEvents.Rejected();
+      expect(events.length).to.be.greaterThan(0);
+      const ev = events[events.length - 1];
+      if (!ev) throw new Error("expected Rejected event");
+      expect(ev.args.proposerId).to.equal(1n);
+      expect(ev.args.reviewerId).to.equal(2n);
+      expect(ev.args.reason).to.equal(REASON_REVIEWER_POLICY);
+    });
+
+    it("blocks subsequent execute() as approved (nonce advanced -> BadNonce)", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      const req = bumpRequest(target.address);
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+
+      // Reject first.
+      await gate.write.postRejection([
+        req,
+        proposerSig,
+        1, // ReviewerPolicy
+        "ipfs://rej",
+        keccak256(toBytes("rej")),
+      ]);
+
+      // Now try to execute the same request — must fail BadNonce because
+      // postRejection advanced the pair nonce.
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSig, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/BadNonce/);
+    });
+
+    it("rejects with empty proposerSig (validator can record a proposer-side abort)", async function () {
+      const { gate, va, target } = await deployRig();
+      const req = bumpRequest(target.address);
+
+      // Empty proposerSig means "no proof, but a validator wants the rejection on record".
+      await gate.write.postRejection([
+        req,
+        "0x" as Hex,
+        2, // ReviewerSignatureMissing
+        "ipfs://rej-empty",
+        keccak256(toBytes("rej-empty")),
+      ]);
+
+      expect(await va.read.callCount()).to.equal(1n);
+      expect((await va.read.lastCall()).score).to.equal(0);
+    });
+  });
+
   describe("execute() id-shape guards (T017)", function () {
     it("reverts when proposerId == reviewerId -> SameAgentTwice", async function () {
       const { gate, target, proposer, reviewer } = await deployRig();

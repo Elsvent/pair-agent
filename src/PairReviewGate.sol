@@ -115,6 +115,11 @@ contract PairReviewGate is IPairReviewGate, EIP712, ReentrancyGuard {
     // -------------------------------------------------------------------------
 
     /// @inheritdoc IPairReviewGate
+    /// @dev Rejection path: the reviewer refused to approve. We bump the pair
+    ///      nonce so the same request can't be resubmitted via execute(), and
+    ///      we post a score=0 outcome to the validation registry. Callers SHOULD
+    ///      provide proposerSig (proves the proposer at least committed to the
+    ///      payload) but we accept empty sig too — the caller is the validator.
     function postRejection(
         AgentRequest calldata req,
         bytes calldata proposerSig,
@@ -122,15 +127,38 @@ contract PairReviewGate is IPairReviewGate, EIP712, ReentrancyGuard {
         string calldata evidenceURI,
         bytes32 evidenceHash
     ) external {
-        // TODO(T018): Claude Code implements per failing tests.
-        //
-        // Steps:
-        //  1. Same invariant checks as execute (ids, deadline, nonce match).
-        //  2. If proposerSig.length > 0, verify it (so we know the Proposer at least signed).
-        //  3. Increment _pairNonce so the request cannot be re-used as approved.
-        //  4. Post REJECTED outcome (score=0) to validation adapter.
-        //  5. Emit Rejected.
-        revert("not implemented");
+        // 1. Invariants (same as execute, minus the value/msg.value pairing).
+        if (req.proposerId == 0 || req.reviewerId == 0) revert ZeroAgentId();
+        if (req.proposerId == req.reviewerId) revert SameAgentTwice(req.proposerId);
+        if (block.timestamp > req.deadline) revert ExpiredDeadline(req.deadline, block.timestamp);
+
+        // 2. Pair-nonce check.
+        bytes32 pairKey = _pairKey(req.proposerId, req.reviewerId);
+        uint256 expectedNonce = _pairNonce[pairKey];
+        if (req.nonce != expectedNonce) revert BadNonce(expectedNonce, req.nonce);
+
+        // 3. Optional proposer-sig verification (so we know the proposer
+        //    actually committed to this payload before the reviewer refused).
+        bytes32 digest = _hashTypedDataV4(_structHash(req));
+        if (proposerSig.length > 0) {
+            address proposerWallet = identity.getAgentWallet(req.proposerId);
+            if (!SignatureChecker.isValidSignatureNow(proposerWallet, digest, proposerSig)) {
+                revert InvalidProposerSig();
+            }
+        }
+
+        // 4. Effects: bump nonce so this request cannot be re-submitted as approved.
+        unchecked {
+            _pairNonce[pairKey] = expectedNonce + 1;
+        }
+
+        // 5. Post REJECTED outcome (score=0).
+        validation.postOutcome(
+            req.proposerId, 0, digest, evidenceURI, evidenceHash, _VALIDATION_TAG
+        );
+
+        // 6. Emit.
+        emit Rejected(req.proposerId, req.reviewerId, digest, reason, evidenceURI);
     }
 
     // -------------------------------------------------------------------------

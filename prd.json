@@ -215,7 +215,7 @@
         "Both tests green; SignatureChecker handles the dispatch correctly"
       ],
       "files": ["test/PairReviewGate.test.ts"],
-      "status": "in_progress"
+      "status": "needs_human_review"
     },
     {
       "id": "T016",
@@ -229,7 +229,7 @@
         "Test green"
       ],
       "files": ["src/test-helpers/ReentrancyAttacker.sol", "test/PairReviewGate.test.ts"],
-      "status": "in_progress"
+      "status": "needs_human_review"
     },
     {
       "id": "T017",
@@ -243,7 +243,7 @@
         "All green"
       ],
       "files": ["test/PairReviewGate.test.ts"],
-      "status": "in_progress"
+      "status": "needs_human_review"
     },
     {
       "id": "T018",
@@ -258,7 +258,7 @@
         "All green"
       ],
       "files": ["src/PairReviewGate.sol", "test/PairReviewGate.test.ts"],
-      "status": "todo"
+      "status": "needs_human_review"
     },
     {
       "id": "T020",
