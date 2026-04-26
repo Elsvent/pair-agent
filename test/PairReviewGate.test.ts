@@ -4,6 +4,7 @@ import {
   encodeFunctionData,
   getAddress,
   keccak256,
+  parseAbi,
   toBytes,
   type Address,
   type Hex,
@@ -203,6 +204,134 @@ describe("PairReviewGate (T011)", function () {
       await expect(
         gate.write.execute([req, proposerSig, reviewerSigWrongVerifying, "", "0x" + "00".repeat(32) as Hex]),
       ).to.be.rejectedWith(/InvalidReviewerSig/);
+    });
+  });
+
+  describe("execute() ERC-1271 reviewer path (T015)", function () {
+    it("executes when the reviewer is a MockERC1271 smart-account wallet", async function () {
+      const { id, va, target, gate, proposer, reviewer } = await deployRig();
+
+      // Deploy a 1271 wallet pointing at the reviewer's underlying key.
+      const wallet = await hre.viem.deployContract("MockERC1271", [reviewer.address]);
+      // Rotate the reviewer's wallet in the registry to the 1271 contract.
+      await id.write.rotateAgentWallet([2n, wallet.address]);
+
+      const req = bumpRequest(target.address);
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      // Reviewer still signs with the same key — 1271 wallet recovers it.
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+
+      await gate.write.execute([req, proposerSig, reviewerSig, "ipfs://e", keccak256(toBytes("e"))]);
+      expect(await target.read.callCount()).to.equal(1n);
+      expect(await va.read.callCount()).to.equal(1n);
+    });
+
+    it("reverts when the 1271 wallet is toggled invalid -> InvalidReviewerSig", async function () {
+      const { id, target, gate, proposer, reviewer } = await deployRig();
+
+      const wallet = await hre.viem.deployContract("MockERC1271", [reviewer.address]);
+      await id.write.rotateAgentWallet([2n, wallet.address]);
+      await wallet.write.toggleInvalid([true]);
+
+      const req = bumpRequest(target.address);
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSig, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/InvalidReviewerSig/);
+    });
+  });
+
+  describe("execute() id-shape guards (T017)", function () {
+    it("reverts when proposerId == reviewerId -> SameAgentTwice", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      const req = bumpRequest(target.address, { reviewerId: 1n }); // same as proposerId
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSig, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/SameAgentTwice/);
+    });
+
+    it("reverts when proposerId == 0 -> ZeroAgentId", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      const req = bumpRequest(target.address, { proposerId: 0n });
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSig, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/ZeroAgentId/);
+    });
+
+    it("reverts when reviewerId == 0 -> ZeroAgentId", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      const req = bumpRequest(target.address, { reviewerId: 0n });
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSig, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/ZeroAgentId/);
+    });
+  });
+
+  describe("execute() reentrancy guard (T016)", function () {
+    it("reverts when the target re-enters execute() (nonReentrant)", async function () {
+      const { gate, proposer, reviewer } = await deployRig();
+      const attacker = await hre.viem.deployContract("ReentrancyAttacker");
+
+      // Build a request that calls into the attacker.
+      const req = bumpRequest(attacker.address, {
+        // Any non-empty calldata that doesn't match a function on the attacker
+        // routes to fallback(). 0xdeadbeef is a fine sentinel.
+        data: "0xdeadbeef" as Hex,
+      });
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+
+      // Pre-arm the attacker with the FULL execute() calldata so its fallback
+      // re-enters with the same args.
+      const evidenceURI = "ipfs://e";
+      const evidenceHash: Hex = keccak256(toBytes("e"));
+      const executeCalldata = encodeFunctionData({
+        abi: parseAbi([
+          "function execute((uint256,uint256,address,uint256,bytes,uint256,uint256,bytes32) req, bytes proposerSig, bytes reviewerSig, string evidenceURI, bytes32 evidenceHash) external payable returns (bytes)",
+        ]),
+        functionName: "execute",
+        args: [
+          [
+            req.proposerId,
+            req.reviewerId,
+            req.target,
+            req.value,
+            req.data,
+            req.nonce,
+            req.deadline,
+            req.contextHash,
+          ],
+          proposerSig,
+          reviewerSig,
+          evidenceURI,
+          evidenceHash,
+        ],
+      });
+      await attacker.write.arm([gate.address, executeCalldata]);
+
+      // Outer execute call: attacker.fallback() runs, attempts the recursive
+      // execute, hits ReentrancyGuard, bubbles up. Outer execute sees the
+      // call failed -> CallFailed.
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSig, evidenceURI, evidenceHash]),
+      ).to.be.rejectedWith(/CallFailed|ReentrancyGuard/);
     });
   });
 
