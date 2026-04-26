@@ -154,8 +154,9 @@
         "Mock IdentityRegistry resolves agentId → operator at execution time (not signing time)",
         "Test green via pnpm test --grep happy"
       ],
-      "files": ["src/PairReviewGate.sol", "test/PairReviewGate.test.ts", "test/helpers/signing.ts"],
-      "status": "todo"
+      "files": ["src/PairReviewGate.sol", "test/PairReviewGate.test.ts", "test/helpers/signing.ts", "src/test-helpers/CallTarget.sol", "hardhat.config.ts"],
+      "status": "needs_human_review",
+      "notes": "execute() implements: invariant checks (zero-id, same-agent-twice, deadline, msg.value), nonce check, getAgentWallet at execution time (Rule 5), EIP-712 verify via SignatureChecker (handles ERC-1271), CEI pattern (nonce bumped pre-call, nonReentrant), validation.postOutcome(score=100), Executed event. viaIR enabled in hardhat.config to fit 8 locals + struct."
     },
     {
       "id": "T012",

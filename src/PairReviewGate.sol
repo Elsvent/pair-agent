@@ -11,8 +11,8 @@ import {IValidationAdapter} from "./interfaces/IValidationAdapter.sol";
 
 /// @title PairReviewGate
 /// @notice 2-of-2 agent safety gate built on ERC-8004.
-/// @dev    Implementation is owned by Claude Code under the rules in CLAUDE.md.
-///         This file is a SKELETON. Tests in test/PairReviewGate.test.ts drive the impl.
+/// @dev    Implementation owned by Claude Code under the rules in CLAUDE.md.
+///         Tests in test/PairReviewGate.test.ts drive the impl.
 contract PairReviewGate is IPairReviewGate, EIP712, ReentrancyGuard {
     // -------------------------------------------------------------------------
     // EIP-712 type definitions
@@ -61,27 +61,53 @@ contract PairReviewGate is IPairReviewGate, EIP712, ReentrancyGuard {
         bytes calldata reviewerSig,
         string calldata evidenceURI,
         bytes32 evidenceHash
-    ) external payable nonReentrant returns (bytes memory) {
-        // TODO(T011..T017): Claude Code implements per failing tests in test/PairReviewGate.test.ts.
-        //
-        // Required steps in order:
-        //  1. Validate basic invariants:
-        //       - req.proposerId != 0, req.reviewerId != 0  (ZeroAgentId)
-        //       - req.proposerId != req.reviewerId          (SameAgentTwice)
-        //       - block.timestamp <= req.deadline           (ExpiredDeadline)
-        //       - req.value == msg.value                    (WrongMsgValue)
-        //  2. Compute pairKey, check req.nonce == _pairNonce[pairKey] (BadNonce).
-        //  3. Resolve operators VIA identity.operatorOf(...) AT EXECUTION TIME.
-        //     Do NOT cache or pass in. Optional: check identity.isActive(...) (InactiveAgent).
-        //  4. Compute the EIP-712 digest from req.
-        //  5. Verify proposerSig with SignatureChecker against proposer operator.
-        //  6. Verify reviewerSig with SignatureChecker against reviewer operator.
-        //  7. EFFECTS: increment _pairNonce[pairKey] BEFORE the external call.
-        //  8. INTERACTION: target.call{value: req.value}(req.data); revert on failure.
-        //  9. Post APPROVED outcome (score=100) to validation adapter.
-        // 10. Emit Executed.
-        // 11. Return returnData.
-        revert("not implemented");
+    ) external payable nonReentrant returns (bytes memory returnData) {
+        // 1. Basic invariants. Order matters: cheapest checks first.
+        if (req.proposerId == 0 || req.reviewerId == 0) revert ZeroAgentId();
+        if (req.proposerId == req.reviewerId) revert SameAgentTwice(req.proposerId);
+        if (block.timestamp > req.deadline) revert ExpiredDeadline(req.deadline, block.timestamp);
+        if (msg.value != req.value) revert WrongMsgValue(req.value, msg.value);
+
+        // 2. Pair-keyed nonce check.
+        bytes32 pairKey = _pairKey(req.proposerId, req.reviewerId);
+        uint256 expectedNonce = _pairNonce[pairKey];
+        if (req.nonce != expectedNonce) revert BadNonce(expectedNonce, req.nonce);
+
+        // 3. Resolve current agent wallets at EXECUTION time (CLAUDE.md Rule 5).
+        //    Never cache, never pre-resolve, never pass in.
+        address proposerWallet = identity.getAgentWallet(req.proposerId);
+        address reviewerWallet = identity.getAgentWallet(req.reviewerId);
+
+        // 4. EIP-712 digest the agents signed over.
+        bytes32 digest = _hashTypedDataV4(_structHash(req));
+
+        // 5/6. Verify both signatures (SignatureChecker handles ERC-1271 dispatch
+        //      transparently for smart-account reviewers, T015).
+        if (!SignatureChecker.isValidSignatureNow(proposerWallet, digest, proposerSig)) {
+            revert InvalidProposerSig();
+        }
+        if (!SignatureChecker.isValidSignatureNow(reviewerWallet, digest, reviewerSig)) {
+            revert InvalidReviewerSig();
+        }
+
+        // 7. Effects: bump pair nonce BEFORE the external call (CLAUDE.md Rule 6).
+        unchecked {
+            _pairNonce[pairKey] = expectedNonce + 1;
+        }
+
+        // 8. Interaction.
+        bool ok;
+        (ok, returnData) = req.target.call{value: req.value}(req.data);
+        if (!ok) revert CallFailed(returnData);
+
+        // 9. Post APPROVED outcome (score=100). The adapter wraps the canonical
+        //    two-phase ERC-8004 Validation Registry call (T030).
+        validation.postOutcome(
+            req.proposerId, 100, digest, evidenceURI, evidenceHash, _VALIDATION_TAG
+        );
+
+        // 10. Emit.
+        emit Executed(req.proposerId, req.reviewerId, digest, req.target, req.value, returnData);
     }
 
     // -------------------------------------------------------------------------

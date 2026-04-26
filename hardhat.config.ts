@@ -11,7 +11,10 @@ const config: HardhatUserConfig = {
     version: "0.8.24",
     settings: {
       optimizer: { enabled: true, runs: 200 },
-      viaIR: false,
+      // execute() has 8 locals + calldata struct (8 fields) + return — Yul stack
+      // is the only way through without splitting the function. viaIR also
+      // gives better optimizer output.
+      viaIR: true,
     },
   },
   paths: {
