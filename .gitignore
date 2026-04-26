@@ -3,6 +3,13 @@ artifacts/
 cache/
 typechain-types/
 
+# Coverage
+coverage/
+coverage.json
+.coverage_cache/
+.coverage_artifacts/
+.coverage_contracts/
+
 # Node
 node_modules/
 .pnpm-store/
