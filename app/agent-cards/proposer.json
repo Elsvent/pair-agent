@@ -1,0 +1,36 @@
+{
+  "name": "PairReviewGate Proposer",
+  "description": "Proposer half of the 2-of-2 PairReviewGate. Takes a user intent + tool catalog, asks an LLM to choose a structured action, builds an EIP-712 AgentRequest, and signs with the registered operator key. Independent of the Reviewer; runs on a different LLM provider so a single-vendor compromise cannot defeat the gate.",
+  "version": "1",
+  "schema": "https://erc8004.org/agent-card/v1",
+  "image": "ipfs://<set-by-T032>/proposer-avatar.png",
+  "external_url": "https://github.com/Elsvent/pair-agent",
+  "capabilities": [
+    "tool-selection",
+    "eip712-signing",
+    "structured-action-proposal"
+  ],
+  "endpoints": {
+    "rpc": "https://example.com/proposer/rpc",
+    "ws": "wss://example.com/proposer/ws"
+  },
+  "policies": {
+    "rationale_visibility": "private",
+    "rationale_pinned_to_ipfs": true,
+    "rationale_forwarded_to_reviewer": false,
+    "deterministic_seed_for_demos": "PROPOSER_DEMO_SEED"
+  },
+  "model": {
+    "provider": "<set-via-PROPOSER_LLM_PROVIDER-env>",
+    "name": "<set-via-PROPOSER_LLM_MODEL-env>",
+    "must_differ_from_reviewer": true
+  },
+  "operator": {
+    "rotation": "supported",
+    "resolution": "registry.getAgentWallet(tokenId) at execute() time"
+  },
+  "links": {
+    "source": "https://github.com/Elsvent/pair-agent/blob/main/app/agents/proposer.ts",
+    "design": "https://github.com/Elsvent/pair-agent/blob/main/ARCHITECTURE.md"
+  }
+}

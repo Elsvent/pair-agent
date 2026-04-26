@@ -333,8 +333,8 @@
         "app/agent-cards/reviewer.json",
         "scripts/mintAgents.ts"
       ],
-      "status": "todo",
-      "notes": "setAgentWallet requires an EIP-712 signature from the agent owner — see canonical IdentityRegistryUpgradeable for the typed-data domain."
+      "status": "blocked",
+      "notes": "Cards + mint script written; running blocks on (a) successful T031 deploy, (b) PINATA_JWT or WEB3_STORAGE_TOKEN in .env for IPFS pinning. setAgentWallet step (T032 follow-up) needs scripts/setAgentWallets.ts implemented separately — requires EIP-712 sig over (agentId, newWallet, deadline) from each agent owner per the canonical IdentityRegistryUpgradeable domain."
     },
     {
       "id": "T040",
@@ -410,7 +410,8 @@
         "deployments/base-sepolia.json updated with example tx hash"
       ],
       "files": [],
-      "status": "todo"
+      "status": "blocked",
+      "notes": "Live testnet recording. Requires (a) T031 deployed, (b) T032 mints done, (c) LLM keys, (d) screen-recording. All human-driven."
     },
     {
       "id": "T051",
@@ -424,7 +425,8 @@
         "Deterministic seed; documented in app/demo/attack-scenario.md"
       ],
       "files": ["app/demo/attack-scenario.md", "app/demo/attack-payload.json"],
-      "status": "todo"
+      "status": "blocked",
+      "notes": "Scenario + deterministic payload + 4 variants documented. Live recording (T081) requires T032 done + LLM keys + a deployed gate + a 4-min screen recording — all human-driven."
     },
     {
       "id": "T060",
@@ -438,7 +440,8 @@
         "Lives at /dashboard route"
       ],
       "files": ["app/pages/dashboard.tsx", "app/lib/indexer.ts"],
-      "status": "todo"
+      "status": "blocked",
+      "notes": "Nice-to-have. Depends on T050 (deployed gate with real Executed/Rejected events to index) + Next.js install for the dashboard route."
     },
     {
       "id": "T080",
@@ -452,7 +455,8 @@
         "No high-severity items open"
       ],
       "files": ["docs/security-review.md"],
-      "status": "todo"
+      "status": "blocked",
+      "notes": "Slither (`pip install slither-analyzer && slither src/`) can run on the current source now and inform partial findings. Full T080 needs T050+T051 results so the security review covers live behavior. Manual checklist: signature scheme, replay vectors, reentrancy, access control, integer math, external calls."
     },
     {
       "id": "T081",
@@ -466,7 +470,8 @@
         "All explorer links live and point to verified contracts"
       ],
       "files": ["README.md", "docs/demo-video.md"],
-      "status": "todo"
+      "status": "blocked",
+      "notes": "Human creative work. Requires T050+T051 recorded; READ_ME judge-pitch already lives at the top of README.md (30-second pitch); the explorer links land after T031 is run."
     },
     {
       "id": "T082",
@@ -481,7 +486,8 @@
         "Submitted before deadline"
       ],
       "files": [],
-      "status": "todo"
+      "status": "blocked",
+      "notes": "Final user step: ETHGlobal account work + GitHub-public + video upload + submit-before-deadline."
     }
   ]
 }

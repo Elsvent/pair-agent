@@ -1,0 +1,43 @@
+{
+  "name": "PairReviewGate Reviewer",
+  "description": "Reviewer half of the 2-of-2 PairReviewGate. Receives ONLY the structured EIP-712 AgentRequest — no Proposer rationale, no transcript. Two-layer approval: deterministic policy gate (target allowlist, value cap, selector allowlist) THEN an LLM safety check on a different provider than the Proposer. Refusal posts a Validation Registry entry with reasonCode and the gate's pair-nonce advances so the same request cannot be re-submitted as approved.",
+  "version": "1",
+  "schema": "https://erc8004.org/agent-card/v1",
+  "image": "ipfs://<set-by-T032>/reviewer-avatar.png",
+  "external_url": "https://github.com/Elsvent/pair-agent",
+  "capabilities": [
+    "policy-gate",
+    "eip712-signing",
+    "rejection-with-reason-code",
+    "erc1271-smart-account-compatible"
+  ],
+  "endpoints": {
+    "rpc": "https://example.com/reviewer/rpc",
+    "ws": "wss://example.com/reviewer/ws"
+  },
+  "policy": {
+    "source": "app/agents/policies/default.json",
+    "fields": ["allowedTargets", "maxValueWei", "allowedSelectors", "maxRequestsPerMinute"],
+    "evaluator": "deterministic policy gate first; LLM only sees requests that already pass policy"
+  },
+  "model": {
+    "provider": "<set-via-REVIEWER_LLM_PROVIDER-env>",
+    "name": "<set-via-REVIEWER_LLM_MODEL-env>",
+    "must_differ_from_proposer": true
+  },
+  "operator": {
+    "rotation": "supported",
+    "resolution": "registry.getAgentWallet(tokenId) at execute() time"
+  },
+  "rejection_codes": {
+    "1": "TargetNotAllowed",
+    "2": "ValueOverCap",
+    "3": "SelectorNotAllowed",
+    "4": "LLMRejected",
+    "5": "PolicyMalformed"
+  },
+  "links": {
+    "source": "https://github.com/Elsvent/pair-agent/blob/main/app/agents/reviewer.ts",
+    "design": "https://github.com/Elsvent/pair-agent/blob/main/ARCHITECTURE.md"
+  }
+}
