@@ -103,9 +103,10 @@
         "app/scripts/gen-fixtures.ts",
         "test/EIP712Reference.test.ts",
         "test/helpers/signing.ts",
-        "test/fixtures/eip712.json"
+        "test/fixtures/eip712.json",
+        "hardhat.config.ts"
       ],
-      "status": "todo",
+      "status": "in_progress",
       "notes": "This is the most under-rated bug-prevention task in the project. Do not skip."
     },
     {

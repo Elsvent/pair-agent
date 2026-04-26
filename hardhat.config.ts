@@ -22,7 +22,11 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      chainId: 31337,
+      // chainId pinned to Base Sepolia (84532) so EIP-712 fixtures stay valid
+      // across gen-fixtures.ts and test/EIP712Reference.test.ts. The TS-side
+      // domain (buildDomain(chainId, addr)) and the contract-side domainSeparator
+      // both depend on chainId; locking it removes a drift vector.
+      chainId: 84532,
     },
     baseSepolia: {
       url: BASE_SEPOLIA_RPC_URL,
