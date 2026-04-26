@@ -311,9 +311,9 @@
         "Idempotent: re-running with same env reads existing addresses from deployments/base-sepolia.json and skips deploys",
         "Full deploy log (addresses, tx hashes, block numbers) written to deployments/base-sepolia.json"
       ],
-      "files": ["scripts/deploy.ts", "deployments/.gitkeep", "deployments/base-sepolia.json"],
-      "status": "todo",
-      "notes": "Requires .env: BASE_SEPOLIA_RPC_URL, DEPLOYER_PRIVATE_KEY (funded), BASESCAN_API_KEY. If missing, ralph blocks here."
+      "files": ["scripts/deploy.ts", "deployments/.gitkeep", "deployments/base-sepolia.json", "src/external/ValidationRegistryV0.sol"],
+      "status": "needs_human_review",
+      "notes": "Script verified on local Hardhat dry-run (hardhat node uses chainId 84532 too). Idempotent reads/writes deployments/base-sepolia.json. To actually deploy on Base Sepolia: cp .env.example .env, fill BASE_SEPOLIA_RPC_URL + DEPLOYER_PRIVATE_KEY (funded) + BASESCAN_API_KEY, then `pnpm hardhat run scripts/deploy.ts --network baseSepolia`."
     },
     {
       "id": "T032",

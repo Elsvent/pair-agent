@@ -15,8 +15,8 @@ import { keccak256, toBytes, type Address, type Hex } from "viem";
 describe("ValidationAdapterV1 (T030)", function () {
   it("postOutcome calls validationRequest then validationResponse with mapped fields", async function () {
     const id = await hre.viem.deployContract("MockIdentityRegistry");
-    const registry = await hre.viem.deployContract("TestValidationRegistry");
-    await registry.write.initTestable([id.address]);
+    const registry = await hre.viem.deployContract("ValidationRegistryV0");
+    await registry.write.initialize_v0([id.address]);
 
     const adapter = await hre.viem.deployContract("ValidationAdapterV1", [registry.address]);
 
@@ -73,8 +73,8 @@ describe("ValidationAdapterV1 (T030)", function () {
 
   it("rejection (score=0) is recorded the same way", async function () {
     const id = await hre.viem.deployContract("MockIdentityRegistry");
-    const registry = await hre.viem.deployContract("TestValidationRegistry");
-    await registry.write.initTestable([id.address]);
+    const registry = await hre.viem.deployContract("ValidationRegistryV0");
+    await registry.write.initialize_v0([id.address]);
     const adapter = await hre.viem.deployContract("ValidationAdapterV1", [registry.address]);
 
     await id.write.setAgent([
