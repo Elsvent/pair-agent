@@ -130,4 +130,105 @@ describe("PairReviewGate (T011)", function () {
       expect(await target.read.lastValue()).to.equal(VALUE);
     });
   });
+
+  describe("execute() replay + domain protection (T012)", function () {
+    it("reverts on replay (same nonce)", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      const req = bumpRequest(target.address);
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+      const evidenceURI = "ipfs://e";
+      const evidenceHash: Hex = keccak256(toBytes("e"));
+
+      // First execute succeeds.
+      await gate.write.execute([req, proposerSig, reviewerSig, evidenceURI, evidenceHash]);
+
+      // Replay with the same req (which now carries a stale nonce 0) reverts BadNonce.
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSig, evidenceURI, evidenceHash]),
+      ).to.be.rejectedWith(/BadNonce/);
+    });
+
+    it("reverts on expired deadline (ExpiredDeadline)", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      // Set deadline in the past.
+      const req = bumpRequest(target.address, { deadline: 1n });
+      const signArgs = { chainId: CHAIN_ID, verifyingContract: gate.address, request: req };
+      const proposerSig = await signAgentRequest(proposer, signArgs);
+      const reviewerSig = await signAgentRequest(reviewer, signArgs);
+
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSig, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/ExpiredDeadline/);
+    });
+
+    it("reverts when the signature was made against a different chainId (InvalidProposerSig)", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      const req = bumpRequest(target.address);
+
+      // Proposer signs against chainId 1 (mainnet), reviewer signs correctly.
+      const proposerSigWrongChain = await signAgentRequest(proposer, {
+        chainId: 1,
+        verifyingContract: gate.address,
+        request: req,
+      });
+      const reviewerSig = await signAgentRequest(reviewer, {
+        chainId: CHAIN_ID,
+        verifyingContract: gate.address,
+        request: req,
+      });
+
+      await expect(
+        gate.write.execute([req, proposerSigWrongChain, reviewerSig, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/InvalidProposerSig/);
+    });
+
+    it("reverts when the signature was made against a different verifyingContract (InvalidReviewerSig)", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      const req = bumpRequest(target.address);
+
+      const proposerSig = await signAgentRequest(proposer, {
+        chainId: CHAIN_ID,
+        verifyingContract: gate.address,
+        request: req,
+      });
+      // Reviewer signs against a fake gate address.
+      const reviewerSigWrongVerifying = await signAgentRequest(reviewer, {
+        chainId: CHAIN_ID,
+        verifyingContract: "0x000000000000000000000000000000000000dead" as Address,
+        request: req,
+      });
+
+      await expect(
+        gate.write.execute([req, proposerSig, reviewerSigWrongVerifying, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/InvalidReviewerSig/);
+    });
+  });
+
+  describe("execute() contextHash binding (T013)", function () {
+    it("reverts on contextHash mismatch (InvalidReviewerSig)", async function () {
+      const { gate, target, proposer, reviewer } = await deployRig();
+      const reqA = bumpRequest(target.address, { contextHash: keccak256(toBytes("ctx-A")) });
+      const reqB = { ...reqA, contextHash: keccak256(toBytes("ctx-B")) };
+
+      // Proposer signs over reqA, reviewer signs over reqB. Submit reqA.
+      const proposerSig = await signAgentRequest(proposer, {
+        chainId: CHAIN_ID,
+        verifyingContract: gate.address,
+        request: reqA,
+      });
+      const reviewerSigOverB = await signAgentRequest(reviewer, {
+        chainId: CHAIN_ID,
+        verifyingContract: gate.address,
+        request: reqB,
+      });
+
+      // contextHash is in the EIP-712 struct hash, so reviewerSigOverB recovers
+      // a different address than reviewerWallet when verified against reqA's digest.
+      await expect(
+        gate.write.execute([reqA, proposerSig, reviewerSigOverB, "", "0x" + "00".repeat(32) as Hex]),
+      ).to.be.rejectedWith(/InvalidReviewerSig/);
+    });
+  });
 });
