@@ -3,58 +3,59 @@ pragma solidity ^0.8.24;
 
 import {IERC8004Identity} from "../interfaces/IERC8004Identity.sol";
 
-/// @notice Test mock for IERC8004Identity. Lets tests rotate operators and toggle
-///         active state to exercise PairReviewGate's security properties.
+/// @notice Test mock for IERC8004Identity. Lets tests rotate agent wallets to
+///         exercise PairReviewGate's operator-rotation security property
+///         (CLAUDE.md Rule 5).
+/// @dev    Test-helper convenience methods (setAgent, rotateAgentWallet) live
+///         alongside the canonical interface methods. Tests use the helpers;
+///         PairReviewGate only ever sees the IERC8004Identity surface.
 contract MockIdentityRegistry is IERC8004Identity {
     struct Agent {
         address owner;
-        address operator;
+        address wallet;
         string uri;
-        bool active;
         bool exists;
     }
 
     mapping(uint256 => Agent) internal _agents;
+    uint256 internal _nextId = 1;
 
-    function setAgent(
-        uint256 agentId,
-        address owner_,
-        address operator_,
-        string memory uri_,
-        bool active_
-    ) external {
-        _agents[agentId] = Agent({
-            owner: owner_,
-            operator: operator_,
-            uri: uri_,
-            active: active_,
-            exists: true
-        });
+    // -----------------------------------------------------------------------
+    // Test helpers (not part of IERC8004Identity)
+    // -----------------------------------------------------------------------
+
+    function setAgent(uint256 agentId, address owner_, address wallet_, string memory uri_) external {
+        _agents[agentId] = Agent({owner: owner_, wallet: wallet_, uri: uri_, exists: true});
+        if (agentId >= _nextId) _nextId = agentId + 1;
     }
 
-    function rotateOperator(uint256 agentId, address newOperator) external {
+    function rotateAgentWallet(uint256 agentId, address newWallet) external {
         require(_agents[agentId].exists, "no agent");
-        _agents[agentId].operator = newOperator;
+        _agents[agentId].wallet = newWallet;
     }
 
-    function setActive(uint256 agentId, bool v) external {
-        require(_agents[agentId].exists, "no agent");
-        _agents[agentId].active = v;
+    // -----------------------------------------------------------------------
+    // IERC8004Identity surface
+    // -----------------------------------------------------------------------
+
+    /// @inheritdoc IERC8004Identity
+    function getAgentWallet(uint256 agentId) external view returns (address) {
+        return _agents[agentId].wallet;
     }
 
-    function operatorOf(uint256 agentId) external view returns (address) {
-        return _agents[agentId].operator;
-    }
-
+    /// @inheritdoc IERC8004Identity
     function ownerOf(uint256 agentId) external view returns (address) {
         return _agents[agentId].owner;
     }
 
+    /// @inheritdoc IERC8004Identity
     function tokenURI(uint256 agentId) external view returns (string memory) {
         return _agents[agentId].uri;
     }
 
-    function isActive(uint256 agentId) external view returns (bool) {
-        return _agents[agentId].active;
+    /// @inheritdoc IERC8004Identity
+    function register(string memory agentURI) external returns (uint256 agentId) {
+        agentId = _nextId++;
+        _agents[agentId] = Agent({owner: msg.sender, wallet: msg.sender, uri: agentURI, exists: true});
     }
 }

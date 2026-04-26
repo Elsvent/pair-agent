@@ -23,10 +23,12 @@
       ],
       "files": [
         "src/interfaces/IERC8004Identity.sol",
-        "src/interfaces/IERC8004Validation.sol"
+        "src/interfaces/IERC8004Validation.sol",
+        "src/test-helpers/MockIdentityRegistry.sol",
+        "src/adapters/ValidationAdapterV1.sol"
       ],
-      "status": "in_progress",
-      "notes": "BLOCKER for everything else. Read notes/T001-inputs.md — the canonical sources are pre-fetched there. Do not generate the interface from memory or training data."
+      "status": "needs_human_review",
+      "notes": "Frozen from canonical erc-8004/erc-8004-contracts source files (URLs in each interface header). Identity surface uses getAgentWallet (not the placeholder's operatorOf); Validation surface is two-phase (validationRequest -> validationResponse). MockIdentityRegistry + ValidationAdapterV1 received minimal compile-keepalive patches; their full rewrites land at T003 / T030."
     },
     {
       "id": "T001b",
