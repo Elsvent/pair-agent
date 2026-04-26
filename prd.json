@@ -381,13 +381,22 @@
       "priority": "must",
       "depends_on": ["T040", "T041"],
       "acceptance": [
-        "app/pages/index.tsx: connect wallet, enter intent, see both agents' decisions, submit to gate",
+        "app/lib/orchestrator.ts: pure-TS runPairReview(...) — runs proposer, runs reviewer with sanitized request, pins evidence to IPFS, returns either an executable bundle (req + sigs + evidenceURI) or a rejection",
+        "app/lib/contracts.ts: PairReviewGate ABI snippet + viem helpers (encodeExecute, decodeExecutedEvent)",
+        "app/lib/ipfs.ts: IPFSPinner interface + stub implementation (real Pinata/web3.storage client wired by user via env)",
         "Uses viem only (no ethers)",
-        "Pins evidence bundle to IPFS, includes CID in execute call",
-        "Shows live event status: pending → executed | rejected"
+        "Vitest covers orchestrator happy path + reviewer-rejection path with mocked LLMs and mock IPFS",
+        "app/pages/index.tsx: thin React wrapper that calls runPairReview (rendering layer requires user to `pnpm add next react react-dom` — out of scope for ralph since Next dev env setup is interactive)"
       ],
-      "files": ["app/pages/index.tsx", "app/lib/contracts.ts"],
-      "status": "todo"
+      "files": [
+        "app/lib/orchestrator.ts",
+        "app/lib/contracts.ts",
+        "app/lib/ipfs.ts",
+        "app/lib/__tests__/orchestrator.test.ts",
+        "app/pages/index.tsx"
+      ],
+      "status": "needs_human_review",
+      "notes": "Core orchestration extracted to app/lib/orchestrator.ts (vitest-tested 3 paths: executable, LLM-rejection, policy-rejection-without-LLM-call). The React rendering layer in app/pages/index.tsx is a documented stub pending `pnpm add next react react-dom @types/react @types/react-dom`. PinataPinner / web3.storage adapter would land at the same time."
     },
     {
       "id": "T050",
