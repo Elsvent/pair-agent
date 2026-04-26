@@ -58,4 +58,18 @@ contract MockIdentityRegistry is IERC8004Identity {
         agentId = _nextId++;
         _agents[agentId] = Agent({owner: msg.sender, wallet: msg.sender, uri: agentURI, exists: true});
     }
+
+    // -----------------------------------------------------------------------
+    // ERC-721-ish surface used by canonical ValidationRegistryUpgradeable's
+    // permission check (T030). Default no-approval stubs; tests don't need
+    // operator approvals because they set the agent owner directly.
+    // -----------------------------------------------------------------------
+
+    function isApprovedForAll(address /*owner*/, address /*operator*/) external pure returns (bool) {
+        return false;
+    }
+
+    function getApproved(uint256 /*agentId*/) external pure returns (address) {
+        return address(0);
+    }
 }

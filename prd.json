@@ -290,9 +290,12 @@
       "files": [
         "src/adapters/ValidationAdapterV1.sol",
         "test/ValidationAdapterV1.test.ts",
-        "src/PairReviewGate.sol"
+        "src/PairReviewGate.sol",
+        "src/test-helpers/MockIdentityRegistry.sol",
+        "src/test-helpers/TestValidationRegistry.sol"
       ],
-      "status": "todo"
+      "status": "needs_human_review",
+      "notes": "ValidationAdapterV1.postOutcome translates to validationRequest -> validationResponse with bytes32-tag -> hex-string conversion. Integration test deploys the canonical ValidationRegistryUpgradeable body via TestValidationRegistry (assembly slot-set sidesteps the canonical's reinitializer(2)+onlyOwner deployment dance which is meant for proxy v1->v2 upgrades). Also asserts persisted state via getValidationStatus."
     },
     {
       "id": "T031",
