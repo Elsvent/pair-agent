@@ -344,12 +344,13 @@
       "depends_on": ["T031"],
       "acceptance": [
         "app/agents/proposer.ts: takes user intent, builds AgentRequest, signs EIP-712 with operator key (env)",
-        "Uses LLM provider A (env: PROPOSER_LLM_PROVIDER, PROPOSER_LLM_MODEL)",
-        "Logs rationale to evidence bundle (NOT forwarded to Reviewer)",
-        "Vitest unit test: given a fixed prompt + seed, produces a deterministic AgentRequest"
+        "Uses LLM provider A via injected LLMProvider interface (lets prod env use PROPOSER_LLM_PROVIDER/PROPOSER_LLM_MODEL while tests use a deterministic mock)",
+        "Logs rationale to evidence bundle return value (never returns rationale alongside the structured request seen by Reviewer)",
+        "Vitest unit test: given a fixed prompt + mock LLM response, produces a deterministic AgentRequest with a recoverable signature"
       ],
-      "files": ["app/agents/proposer.ts", "app/agents/__tests__/proposer.test.ts"],
-      "status": "todo"
+      "files": ["app/agents/proposer.ts", "app/agents/__tests__/proposer.test.ts", "vitest.config.ts"],
+      "status": "needs_human_review",
+      "notes": "Pluggable LLMProvider interface lets prod use real Anthropic/OpenAI clients while tests use a deterministic mock. Strict JSON parse on the LLM response — invalid output throws, no silent acceptance. Rationale returned alongside (not inside) the request so the orchestrator can pin to IPFS without forwarding to Reviewer."
     },
     {
       "id": "T041",
@@ -359,17 +360,19 @@
       "depends_on": ["T031"],
       "acceptance": [
         "app/agents/reviewer.ts: receives ONLY structured AgentRequest (no rationale)",
-        "Loads policy from app/agents/policies/default.json (allowlist of targets, max value, tool allowlist)",
-        "Uses LLM provider B (different from Proposer)",
-        "Returns either signature or rejection with reasonCode",
-        "Adversarial vitest cases: malicious target, value over cap, unknown selector — all rejected"
+        "Loads policy from app/agents/policies/default.json (allowlist of targets, max value, selector allowlist)",
+        "Uses LLM provider B via injected LLMProvider (different from Proposer's instance in production)",
+        "Returns either {ok:true, signature} or {ok:false, reasonCode}",
+        "Adversarial vitest cases: malicious target, value over cap, unknown selector, LLM rejection — all rejected with the correct reasonCode",
+        "Happy case: policy passes + LLM approves -> recoverable signature"
       ],
       "files": [
         "app/agents/reviewer.ts",
         "app/agents/policies/default.json",
         "app/agents/__tests__/reviewer.test.ts"
       ],
-      "status": "todo"
+      "status": "needs_human_review",
+      "notes": "Two-layer review: deterministic policy gate (target allowlist, value cap, selector allowlist) THEN LLM safety check. Policy gate alone catches malformed/malicious requests cheaply; LLM catches semantic red flags. Reasoned rejection codes are typed (ReviewerReasonCode) and map to RejectionReason on-chain at the orchestrator boundary."
     },
     {
       "id": "T042",
