@@ -1,0 +1,15 @@
+{
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "txHashes": {
+    "validationRegistry.initialize_v0": "0x582f5db4a074659e48994b17d8cbcec7e4aeeda9a4c393171fff1ab98d519f39"
+  },
+  "blockNumbers": {
+    "validationRegistry": 40746451
+  },
+  "deployer": "0xada13d64c64634e72ada51fe970f58529c348aee",
+  "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  "validationRegistry": "0x96e4f17bc77584562303e55d6f1270b668504e73",
+  "validationAdapter": "0xddf516420e5181009a2a39b8db2f768124f414e2",
+  "pairReviewGate": "0xa0abceded6492946a85daae5a30b096bb1660650"
+}

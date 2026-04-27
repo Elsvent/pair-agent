@@ -311,9 +311,9 @@
         "Idempotent: re-running with same env reads existing addresses from deployments/base-sepolia.json and skips deploys",
         "Full deploy log (addresses, tx hashes, block numbers) written to deployments/base-sepolia.json"
       ],
-      "files": ["scripts/deploy.ts", "deployments/.gitkeep", "deployments/base-sepolia.json", "src/external/ValidationRegistryV0.sol"],
-      "status": "needs_human_review",
-      "notes": "Script verified on local Hardhat dry-run (hardhat node uses chainId 84532 too). Idempotent reads/writes deployments/base-sepolia.json. To actually deploy on Base Sepolia: cp .env.example .env, fill BASE_SEPOLIA_RPC_URL + DEPLOYER_PRIVATE_KEY (funded) + BASESCAN_API_KEY, then `pnpm hardhat run scripts/deploy.ts --network baseSepolia`."
+      "files": ["scripts/deploy.ts", "deployments/base-sepolia.json", "src/external/ValidationRegistryV0.sol", "hardhat.config.ts"],
+      "status": "done",
+      "notes": "DEPLOYED + VERIFIED on Base Sepolia 2026-04-27. Deployer 0xada13d64c64634e72ada51fe970f58529c348aee (block 40746451+). All three contracts verified via Etherscan V2:\n  ValidationRegistryV0: https://sepolia.basescan.org/address/0x96e4f17bc77584562303e55d6f1270b668504e73#code\n  ValidationAdapterV1:  https://sepolia.basescan.org/address/0xddf516420e5181009a2a39b8db2f768124f414e2#code\n  PairReviewGate:       https://sepolia.basescan.org/address/0xa0abceded6492946a85daae5a30b096bb1660650#code\nFull manifest: deployments/base-sepolia.json. hardhat.config.ts uses Etherscan V2 unified key (no customChains for baseSepolia — built-in)."
     },
     {
       "id": "T032",

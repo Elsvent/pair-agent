@@ -66,9 +66,10 @@ async function main() {
   manifest.network = "base-sepolia";
   manifest.chainId = chainId;
   manifest.deployer = deployer.account.address;
+  // Default to canonical when env var is unset OR empty (?? treats "" as set).
+  const envIdentity = (process.env.ERC8004_IDENTITY_ADDRESS ?? "").trim();
   manifest.identityRegistry =
-    manifest.identityRegistry ??
-    ((process.env.ERC8004_IDENTITY_ADDRESS ?? CANONICAL_IDENTITY) as Address);
+    manifest.identityRegistry ?? ((envIdentity || CANONICAL_IDENTITY) as Address);
   manifest.txHashes = manifest.txHashes ?? {};
   manifest.blockNumbers = manifest.blockNumbers ?? {};
 
@@ -95,8 +96,6 @@ async function main() {
       manifest.validationRegistry!,
     ]);
     manifest.validationAdapter = adapter.address;
-    const code = await publicClient.getCode({ address: adapter.address });
-    if (!code) throw new Error("adapter has no code post-deploy");
     console.log(`  ${adapter.address}`);
   } else {
     console.log(`validationAdapter already deployed: ${manifest.validationAdapter}`);

@@ -1,9 +1,19 @@
+import "dotenv/config";
 import type { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
 import "solidity-coverage";
 
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL ?? "";
-const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY ?? "";
+
+/// Accept both `0x`-prefixed and bare-hex private keys; hardhat-viem requires
+/// the prefixed form. Empty string stays empty so `accounts: []` works in
+/// pre-deploy tests.
+function normalizePk(raw: string): `0x${string}` | "" {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  return (trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`) as `0x${string}`;
+}
+const DEPLOYER_PRIVATE_KEY = normalizePk(process.env.DEPLOYER_PRIVATE_KEY ?? "");
 // Etherscan V2 (Jan 2024+) unified all chain explorers under a single API
 // key issued at https://etherscan.io/myapikey. The same key verifies on
 // Basescan, Arbiscan, Polygonscan, Optimistic Etherscan, etc. The legacy
@@ -44,22 +54,11 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    // Single key from etherscan.io/myapikey — V2 multichain.
-    apiKey: {
-      baseSepolia: ETHERSCAN_API_KEY,
-    },
-    customChains: [
-      {
-        network: "baseSepolia",
-        chainId: 84532,
-        urls: {
-          // V2 endpoint — chain selected via ?chainid=<id>. Replaces the legacy
-          // chain-specific endpoint (api-sepolia.basescan.org/api).
-          apiURL: "https://api.etherscan.io/v2/api?chainid=84532",
-          browserURL: "https://sepolia.basescan.org",
-        },
-      },
-    ],
+    // Single key from etherscan.io/myapikey — works for every chain hardhat-verify
+    // knows about under V2 (incl. baseSepolia, base, sepolia, arbitrumSepolia, …).
+    // Don't add customChains for baseSepolia — it's built-in; overriding with the
+    // legacy api-sepolia.basescan.org endpoint breaks V2's chainid-routed verifies.
+    apiKey: ETHERSCAN_API_KEY,
   },
 };
 
