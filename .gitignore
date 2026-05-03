@@ -10,6 +10,9 @@ coverage.json
 .coverage_artifacts/
 .coverage_contracts/
 
+# Slidev build output (`pnpm slides:build`)
+docs/demo/dist/
+
 # Node
 node_modules/
 .pnpm-store/

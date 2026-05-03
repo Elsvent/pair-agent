@@ -9,7 +9,10 @@
     "coverage": "SOLIDITY_COVERAGE=true TS_NODE_PROJECT=tsconfig.hardhat.json hardhat coverage",
     "fixtures:gen": "tsx app/scripts/gen-fixtures.ts",
     "lint": "eslint app",
-    "build": "next build app"
+    "build": "next build app",
+    "slides": "slidev docs/demo/slides.md",
+    "slides:build": "slidev build docs/demo/slides.md --base /pair-agent/",
+    "slides:export": "slidev export docs/demo/slides.md"
   },
   "dependencies": {
     "viem": "^2.21.0"
@@ -18,6 +21,8 @@
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
     "@openzeppelin/contracts": "5.0.2",
     "@openzeppelin/contracts-upgradeable": "5.0.2",
+    "@slidev/cli": "^52.0.0",
+    "@slidev/theme-default": "^0.25.0",
     "@types/node": "^22.0.0",
     "chai": "^4.5.0",
     "dotenv": "^16.4.0",
