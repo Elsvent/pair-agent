@@ -12,7 +12,8 @@
     "build": "next build app",
     "slides": "slidev docs/demo/slides.md",
     "slides:build": "slidev build docs/demo/slides.md --base /pair-agent/",
-    "slides:export": "slidev export docs/demo/slides.md"
+    "slides:export": "slidev export docs/demo/slides.md",
+    "tts": "tsx scripts/tts.ts"
   },
   "dependencies": {
     "viem": "^2.21.0"

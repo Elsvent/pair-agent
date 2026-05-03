@@ -35,11 +35,45 @@ versions but its renderer doesn't depend on the mismatched APIs.
 | 6 | 1:25–1:45 | Compromise scenario (two-cols) | Proposer compromised, Reviewer refuses |
 | 7 | 1:45–2:00 | Reputation + Close | Validation Registry → public reputation → repo URL |
 
+## Generate the voiceover
+
+```bash
+# Free, zero-setup: macOS `say` (Samantha voice, 175 wpm by default)
+pnpm tts
+# → 11 .m4a files in docs/demo/audio/, one per slide
+
+# Tune the pace if you need to hit 2:00 exactly:
+SAY_RATE=200 pnpm tts   # ~2:11 total
+SAY_RATE=215 pnpm tts   # ~2:00 total (slightly rushed)
+
+# Pick a different macOS voice (must be installed):
+SAY_VOICE=Daniel pnpm tts            # British male
+SAY_VOICE=Ava pnpm tts               # premium female (download via System Settings)
+```
+
+Higher-quality providers auto-activate when their API key is present:
+
+```bash
+# OpenAI tts-1-hd (~$0.005 for the whole 2-min script)
+OPENAI_API_KEY=sk-... pnpm tts
+OPENAI_TTS_VOICE=onyx pnpm tts       # alloy / echo / fable / onyx / nova / shimmer
+
+# ElevenLabs (best quality, free tier covers the 2-min script easily)
+ELEVENLABS_API_KEY=... pnpm tts
+ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM pnpm tts   # default = "Rachel"
+```
+
+The script reads each slide's `<!-- ... -->` block, extracts only the
+quoted-string spans (skipping stage directions like `[00:00-00:10]`),
+and writes one audio file per slide named `NN-<slug>.m4a` (or `.mp3`
+for the cloud providers). Drop them all into iMovie / DaVinci Resolve
+and align each clip to the matching slide.
+
 ## Recording tips
 
-- **Audio first.** Record the voiceover separately in QuickTime/Voice Memos,
-  overlay onto screen capture in iMovie / DaVinci Resolve. Live narration
-  during screen capture sounds rough.
+- **Audio first.** Record the voiceover separately (or use `pnpm tts`
+  above), overlay onto screen capture in iMovie / DaVinci Resolve.
+  Live narration during screen capture sounds rough.
 - **Pre-load Basescan tabs** for the three deployed contracts so they don't
   show a loading state when you switch.
 - **Run terminal at 24pt+ font** in iTerm2 / Warp. The architecture mermaid

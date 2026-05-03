@@ -13,6 +13,9 @@ coverage.json
 # Slidev build output (`pnpm slides:build`)
 docs/demo/dist/
 
+# TTS audio output (`pnpm tts` — regenerate locally)
+docs/demo/audio/
+
 # Node
 node_modules/
 .pnpm-store/
